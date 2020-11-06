@@ -1,5 +1,5 @@
 const sql = require('mssql')
-const mcvayConfig = required('./config.js')
+const mcvayConfig = require('./config.js')
 
 const config = {
     user: mcvayConfig.DB.user,
