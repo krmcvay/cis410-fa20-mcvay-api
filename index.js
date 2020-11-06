@@ -1,10 +1,57 @@
 const express = require('express')
+const bcrypt = require('bcryptjs')
+
 const db = require('./dbConnectExec.js')
 
+
 const app = express();
+app.use(express.json())
 
 app.get("/hi", (req,res)=>{
     res.send("hello world")
+})
+
+app.post("/customers", async (req, res)=>{
+    // res.send("creating customer")
+
+    // console.log("request body", req.body)
+
+    var firstName = req.body.firstName;
+    var lastName = req.body.lastName;
+    var phoneNumber = req.body.phoneNumber;
+    var email = req.body.email;
+    var password = req.body.password;
+
+    if(!firstName || !lastName || !phoneNumber || !email || !password){
+        return res.status(400).send("bad request")
+    }
+
+    firstName = firstName.replace("'","''")
+    lastName = lastName.replace("'","''")
+
+    var emailCheckQuery = `SELECT email
+    FROM customer
+    WHERE email = '${email}'`
+
+    var existingCustomer = await db.executeQuery(emailCheckQuery)
+
+    // console.log("exisiting customer", existingCustomer)
+    if(existingCustomer[0]){
+        return res.status(409).send('Please enter a different email.')
+    }
+
+    var hashedPassword = bcrypt.hashSync(password)
+
+    var insertQuery = `INSERT INTO customer(FirstName,LastName,PhoneNumber,Email,Password)
+    VALUES('${firstName}','${lastName}','${phoneNumber}','${email}','${hashedPassword}')`
+
+    db.executeQuery(insertQuery)
+    .then(()=>{res.status(201).send()})
+    .catch((err)=>{
+        console.log("Error in POST /customers", err)
+        res.status(500).send()
+    })
+
 })
 
 app.get("/books", (req,res)=>{
