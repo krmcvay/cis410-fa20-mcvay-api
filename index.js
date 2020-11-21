@@ -14,6 +14,37 @@ app.use(express.json())
 app.use(cors())
 
 
+app.post('/customers/logout', auth, (req,res) =>{
+    var query = `UPDATE Customer
+    SET Token = NULL
+    WHERE CustomerPK = ${req.customer.CustomerPK}`
+
+    db.executeQuery(query)
+    .then(()=>{
+        res.status(200).send()
+    })
+    .catch((error)=>{
+        console.log("error in POST /customers/logout", error)
+        res.status(500).send()
+    })
+})
+
+
+app.get('/purchases/me', auth, async(req,res)=>{
+    let customerPK = req.customer.CustomerPK;
+    var specificQuery =`SELECT * 
+    FROM Purchase
+    WHERE CustomerFK = ${customerPK}`
+
+    db.executeQuery(specificQuery)
+    .then((result)=>{
+        res.status(200).send(result)
+    })
+    .catch((error)=>{
+        console.log("error in GET /purchases/me", error)
+        res.status(500).send()
+    })
+})
 
 app.post("/purchases", auth, async (req,res)=>{
     try{
