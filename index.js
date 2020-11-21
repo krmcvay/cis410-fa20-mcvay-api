@@ -1,13 +1,50 @@
 const express = require('express')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
+const cors = require('cors')
 
 const db = require('./dbConnectExec.js')
 const config = require('./config.js')
+const auth = require('./middleware/authenticate')
+const { response } = require('express')
 
-
+//azurewebsite.net, colostate.edu
 const app = express();
 app.use(express.json())
+app.use(cors())
+
+
+
+app.post("/purchases", auth, async (req,res)=>{
+    try{
+        var bookFK = req.body.bookFK;
+        var datePurchased = req.body.datePurchased;
+        var quantityPurchased = req.body.quantityPurchased;
+    
+        if(!bookFK || !datePurchased || !quantityPurchased){res.status(400).send("bad request")}
+
+    // datePurchased = datePurchased.replace("'","''")
+
+        let insertQuery = `INSERT INTO Purchase(DatePurchased, QuantityPurchased, BookFK, CustomerFK)
+        OUTPUT inserted.PurchasePK, inserted.DatePurchased, inserted.QuantityPurchased, inserted.BookFK
+        VALUES('${datePurchased}','${quantityPurchased}','${bookFK}',${req.customer.CustomerPK})`
+
+        let insteredPurchase = await db.executeQuery(insertQuery)
+        // console.log(insertedPurchase)
+        res.status(201).send(insteredPurchase[0])
+        // console.log("here is the customer in /purchases", req.customer)
+        // res.send("Here is your response")
+    }
+        catch(error){
+            console.log("error in POST /purchases", error);
+            res.status(500).send()
+        }
+})
+
+app.get('/customers/me', auth, (req,res)=>{
+    res.send(req.customer)
+})
+
 
 app.get("/hi", (req,res)=>{
     res.send("hello world")
@@ -61,7 +98,7 @@ app.post("/customers/login", async (req,res)=>{
     console.log(token)
     //4. save the token in database and send token and user info back to user
 
-    let setTokenQuery = `Update Customer
+    let setTokenQuery = `UPDATE Customer
     SET Token = '${token}'
     WHERE CustomerPK = ${user.CustomerPK}`
 
@@ -169,7 +206,11 @@ app.get("/books/:pk", (req, res)=>{
     })
 })
 
-app.listen(5000,()=>{
-    console.log("app is running on port 5000")
+
+const PORT = process.env.PORT || 5000
+app.listen(PORT,()=>{
+    console.log(`app is running on port ${PORT}`)
 })
+
+
 
